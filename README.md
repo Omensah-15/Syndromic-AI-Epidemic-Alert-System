@@ -17,7 +17,7 @@ SAEAS detects disease outbreaks in real-time by analyzing health reports with AI
 ## Quick Start
 
 ### Use Online (Recommended)
-1. Visit the [live app](https://hpc7e9vyxqdcibx9vx8dkf.streamlit.app/)
+1. Visit the [live app](https://syndromic-ai-epidemic-alert-system-gznipvj3hv5dyw6a7sdk7f.streamlit.app/)
 2. Start submitting health reports immediately
 3. No installation required - works in any browser
 
