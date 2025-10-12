@@ -13,7 +13,6 @@ class DataLoader:
                         'Coastal Area', 'Mountain Region']
             
             syndromes = ['Gastrointestinal', 'Respiratory', 'Vector-borne', 'Water-borne']
-            risk_levels = ['Very Low', 'Low', 'Medium', 'High', 'Critical']
             severities = ['Mild', 'Moderate', 'Severe', 'Critical']
             
             data = []
@@ -41,28 +40,37 @@ class DataLoader:
                 else:
                     risk_level = 'Low'
                 
-                data.append({
+                # Create comprehensive report data with ALL required fields
+                report_data = {
                     'id': i + 1,
                     'timestamp': datetime.now() - timedelta(days=random.randint(1, 365)),
                     'location': location,
                     'syndrome': syndrome,
                     'syndrome_types': [syndrome],
-                    'severity': severity,
+                    'severity': severity,  # This ensures severity exists
                     'cases_count': random.randint(1, 50),
                     'risk_score': risk_score,
                     'risk_level': risk_level,
                     'environmental_data': {
                         'temperature': random.uniform(20, 35),
                         'humidity': random.uniform(30, 90),
-                        'turbidity': random.uniform(0, 100)
+                        'turbidity': random.uniform(0, 100),
+                        'air_quality': random.uniform(20, 150)
                     }
-                })
+                }
+                
+                data.append(report_data)
             
-            return pd.DataFrame(data)
+            df = pd.DataFrame(data)
+            return df
             
         except Exception as e:
             print(f"Error loading sample data: {e}")
-            return pd.DataFrame()
+            # Return empty DataFrame with all required columns
+            return pd.DataFrame(columns=[
+                'id', 'timestamp', 'location', 'syndrome', 'syndrome_types', 
+                'severity', 'cases_count', 'risk_score', 'risk_level', 'environmental_data'
+            ])
     
     def generate_risk_assessments(self, data):
         assessments = []
@@ -71,7 +79,7 @@ class DataLoader:
             return assessments
             
         for _, row in data.iterrows():
-            assessments.append({
+            assessment = {
                 'location': row.get('location', 'Unknown'),
                 'risk_score': row.get('risk_score', 0),
                 'risk_level': row.get('risk_level', 'Low'),
@@ -79,6 +87,7 @@ class DataLoader:
                 'report_id': row.get('id', 0),
                 'syndrome_types': row.get('syndrome_types', []),
                 'environmental_data': row.get('environmental_data', {})
-            })
+            }
+            assessments.append(assessment)
         
         return assessments
