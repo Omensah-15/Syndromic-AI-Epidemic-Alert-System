@@ -7,8 +7,8 @@ class ArduinoManager:
         self.current_data = {}
     
     def discover_ports(self):
-        # Simulate port discovery
-        return []  # Return empty list for simulation
+        # Simulate port discovery - returns empty list for simulation
+        return []
     
     def connect(self, port, baudrate=115200):
         self.is_connected = True
