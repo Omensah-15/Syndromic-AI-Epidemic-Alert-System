@@ -249,7 +249,7 @@ class SAEASApplication:
                         st.session_state.arduino_connected = False
                         st.rerun()
                 else:
-                    st.warning("🔌 Arduino Not Connected")
+                    st.warning("Arduino Not Connected")
                     
                     if st.button("Scan for Arduino"):
                         try:
