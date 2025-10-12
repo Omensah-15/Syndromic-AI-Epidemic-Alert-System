@@ -13,7 +13,6 @@ SAEAS detects disease outbreaks in real-time by analyzing health reports with AI
 - **Live Sensor Monitoring**: Connect Arduino ESP32 for real environmental data
 - **Hotspot Mapping**: Visualize outbreak locations on interactive maps
 - **Smart Alerts**: Get instant notifications for high-risk situations
-- **87% Accuracy**: Machine learning models with proven performance
 
 ## Quick Start
 
