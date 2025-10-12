@@ -18,11 +18,22 @@ warnings.filterwarnings('ignore')
 # Add utils to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from utils.data_loader import DataLoader
-from utils.arduino_manager import ArduinoManager
-from utils.analytics_engine import AdvancedAnalyticsEngine
-from models.model_training import ModelInferenceEngine
-
+try:
+    from utils.data_loader import DataLoader
+    from utils.arduino_manager import ArduinoManager
+    from utils.analytics_engine import AdvancedAnalyticsEngine
+    from models.model_training import ModelInferenceEngine
+except ImportError as e:
+    st.error(f"Import error: {e}")
+    # Create minimal fallback classes
+    class DataLoader:
+        def load_sample_data(self): return pd.DataFrame()
+    class ArduinoManager:
+        def get_current_data(self): return {}
+    class AdvancedAnalyticsEngine:
+        def calculate_metrics(self, data): return {}
+    class ModelInferenceEngine:
+        def predict_risk(self, *args): return {'risk_score': 0.5, 'risk_level': 'Medium'}
 # Page configuration
 st.set_page_config(
     page_title="SAEAS - Epidemic Alert System",
