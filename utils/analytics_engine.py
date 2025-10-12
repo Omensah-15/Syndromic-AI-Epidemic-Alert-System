@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
 import random
 
 class AdvancedAnalyticsEngine:
@@ -17,21 +18,28 @@ class AdvancedAnalyticsEngine:
             }
         
         try:
+            # Convert to DataFrame safely
             df = pd.DataFrame(risk_assessments)
             
-            high_risk_count = len([r for r in risk_assessments 
-                                 if r.get('risk_level') in ['High', 'Critical']])
+            # Calculate metrics with safe column access
+            high_risk_count = 0
+            avg_risk_score = 0
             
-            avg_risk_score = df['risk_score'].mean() if 'risk_score' in df.columns else 0
+            if not df.empty:
+                if 'risk_level' in df.columns:
+                    high_risk_count = len(df[df['risk_level'].isin(['High', 'Critical'])])
+                if 'risk_score' in df.columns:
+                    avg_risk_score = df['risk_score'].mean()
             
             # Calculate outbreak probability
             recent_assessments = [r for r in risk_assessments 
-                                if (datetime.now() - pd.to_datetime(r.get('timestamp', datetime.now()))).days <= 7]
+                                if isinstance(r.get('timestamp'), datetime) and 
+                                (datetime.now() - r['timestamp']).days <= 7]
             
             if recent_assessments:
-                high_risk_ratio = len([r for r in recent_assessments 
-                                     if r.get('risk_level') in ['High', 'Critical']]) / len(recent_assessments)
-                outbreak_probability = min(high_risk_ratio * 1.2, 1.0)
+                high_risk_recent = len([r for r in recent_assessments 
+                                      if r.get('risk_level') in ['High', 'Critical']])
+                outbreak_probability = min((high_risk_recent / len(recent_assessments)) * 1.2, 1.0)
             else:
                 outbreak_probability = 0.0
             
@@ -60,8 +68,14 @@ class AdvancedAnalyticsEngine:
         try:
             # Simple anomaly detection based on risk score
             risk_scores = [r.get('risk_score', 0) for r in risk_assessments]
+            if not risk_scores:
+                return []
+                
             mean_risk = np.mean(risk_scores)
             std_risk = np.std(risk_scores)
+            
+            if std_risk == 0:  # All scores are the same
+                return []
             
             anomalies = []
             for assessment in risk_assessments:
