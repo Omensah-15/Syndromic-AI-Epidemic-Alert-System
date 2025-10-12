@@ -1,4 +1,3 @@
-# apps/main_app.py - Complete Professional Streamlit Application
 import streamlit as st
 import pandas as pd
 import numpy as np
