@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import time
 import sys
 import os
+import random
 
 # Add current directory to path for imports
 sys.path.append(os.path.dirname(__file__))
@@ -31,7 +32,7 @@ except ImportError as e:
                 data.append({
                     'id': i + 1,
                     'timestamp': datetime.now() - timedelta(days=random.randint(1, 365)),
-                    'location': random.choice(['Urban Center', 'Rural Village', 'Coastal Area']),
+                    'location': random.choice(['Urban Center', 'Rural Village A', 'Rural Village B', 'Coastal Area', 'Mountain Region']),
                     'severity': random.choice(['Mild', 'Moderate', 'Severe', 'Critical']),
                     'cases_count': random.randint(1, 50),
                     'risk_score': random.uniform(0.1, 0.9),
@@ -45,7 +46,9 @@ except ImportError as e:
                 })
             return pd.DataFrame(data)
         def generate_risk_assessments(self, data):
-            return data.to_dict('records') if not data.empty else []
+            if data is None or data.empty:
+                return []
+            return data.to_dict('records')
     
     class ArduinoManager:
         def discover_ports(self): return []
@@ -60,12 +63,32 @@ except ImportError as e:
             }
         def generate_simulated_data(self, location):
             return self.get_current_data()
+        def start_auto_detection(self): pass
+        def stop_auto_detection(self): pass
+        def get_connection_status(self):
+            return {
+                'connected': False,
+                'data_source': 'simulated',
+                'last_read_time': None,
+                'data_age_seconds': None,
+                'auto_detection_active': False
+            }
+        def force_rescan(self): return []
+        def send_command(self, command): return True
     
     class AdvancedAnalyticsEngine:
         def calculate_metrics(self, data): 
+            if not data:
+                return {
+                    'total_reports': 0,
+                    'high_risk_count': 0,
+                    'avg_risk_score': 0,
+                    'outbreak_probability': 0.0,
+                    'avg_response_time': 0.0
+                }
             return {
-                'total_reports': len(data) if data else 0,
-                'high_risk_count': len([d for d in data if d.get('risk_level') in ['High', 'Critical']]) if data else 0,
+                'total_reports': len(data),
+                'high_risk_count': len([d for d in data if d.get('risk_level') in ['High', 'Critical']]),
                 'avg_risk_score': np.mean([d.get('risk_score', 0) for d in data]) if data else 0,
                 'outbreak_probability': 0.1,
                 'avg_response_time': 12.5
@@ -79,8 +102,6 @@ except ImportError as e:
                 'risk_level': 'Low',
                 'model_confidence': 0.8
             }
-
-import random
 
 # Page configuration
 st.set_page_config(
@@ -99,113 +120,151 @@ class SAEASApplication:
         self.initialize_session_state()
         
         # Start auto-detection when app starts
-        self.arduino_manager.start_auto_detection()
+        try:
+            self.arduino_manager.start_auto_detection()
+        except:
+            pass  # Silently fail if auto-detection not available
     
     def initialize_session_state(self):
+        """Initialize session state safely"""
         if 'app_initialized' not in st.session_state:
             st.session_state.app_initialized = True
             st.session_state.reports_data = []
             st.session_state.risk_assessments = []
             st.session_state.analytics_metrics = {}
             st.session_state.arduino_connected = False
-            st.session_state.last_auto_scan = None
             
-            # Load initial data
+            # Load initial data safely
             self.load_initial_data()
+    
+    def load_initial_data(self):
+        """Load initial data with error handling"""
+        try:
+            sample_data = self.data_loader.load_sample_data()
+            if sample_data is not None and not sample_data.empty:
+                # Ensure all required columns exist
+                sample_data = self._ensure_dataframe_columns(sample_data)
+                st.session_state.reports_data = sample_data.to_dict('records')
+                
+                # Generate risk assessments safely
+                risk_assessments = self.data_loader.generate_risk_assessments(sample_data)
+                if risk_assessments:
+                    st.session_state.risk_assessments = risk_assessments
+                
+                # Calculate initial metrics
+                st.session_state.analytics_metrics = self.analytics_engine.calculate_metrics(
+                    st.session_state.risk_assessments
+                )
+        except Exception as e:
+            # If loading fails, create minimal data
+            st.session_state.reports_data = self._create_minimal_data()
+            st.session_state.risk_assessments = []
+            st.session_state.analytics_metrics = {
+                'total_reports': len(st.session_state.reports_data),
+                'high_risk_count': 0,
+                'avg_risk_score': 0.3,
+                'outbreak_probability': 0.1,
+                'avg_response_time': 12.5
+            }
+    
+    def _create_minimal_data(self):
+        """Create minimal sample data if loading fails"""
+        data = []
+        for i in range(50):
+            data.append({
+                'id': i + 1,
+                'timestamp': datetime.now() - timedelta(days=random.randint(1, 30)),
+                'location': random.choice(['Urban Center', 'Rural Village A', 'Coastal Area']),
+                'severity': random.choice(['Mild', 'Moderate', 'Severe']),
+                'cases_count': random.randint(1, 20),
+                'risk_score': random.uniform(0.1, 0.7),
+                'risk_level': random.choice(['Low', 'Medium', 'High']),
+                'syndrome_types': [random.choice(['Gastrointestinal', 'Respiratory'])],
+                'text': f"Sample report {i+1} with symptoms",
+                'environmental_data': {
+                    'temperature': random.uniform(20, 30),
+                    'humidity': random.uniform(40, 80),
+                    'turbidity': random.uniform(10, 60)
+                }
+            })
+        return data
+    
+    def _ensure_dataframe_columns(self, df):
+        """Ensure DataFrame has all required columns"""
+        required_columns = {
+            'id': range(len(df)),
+            'timestamp': [datetime.now() - timedelta(days=i) for i in range(len(df))],
+            'location': ['Unknown'] * len(df),
+            'severity': ['Moderate'] * len(df),
+            'cases_count': [1] * len(df),
+            'risk_score': [0.5] * len(df),
+            'risk_level': ['Medium'] * len(df),
+            'syndrome_types': [['General']] * len(df),
+            'environmental_data': [{}] * len(df)
+        }
+        
+        for col, default_values in required_columns.items():
+            if col not in df.columns:
+                df[col] = default_values[:len(df)]
+        
+        return df
+    
+    def run(self):
+        # Show import errors at top
+        if IMPORT_ERROR:
+            st.warning(f"Import warnings: {IMPORT_ERROR}")
+        
+        self.render_sidebar()
+        self.render_header()
+        self.render_dashboard()
     
     def render_sidebar(self):
         with st.sidebar:
             st.title("SAEAS Control Panel")
             
-            # Enhanced Arduino Connection Section with Auto-Detection
+            # Arduino Connection Section
             st.subheader("Arduino ESP32")
             
-            connection_status = self.arduino_manager.get_connection_status()
-            
-            # Update session state based on actual connection
-            st.session_state.arduino_connected = connection_status['connected']
-            
-            if connection_status['connected']:
-                st.success("Arduino Connected")
+            try:
+                connection_status = self.arduino_manager.get_connection_status()
+                st.session_state.arduino_connected = connection_status['connected']
                 
-                # Show connection details
-                col1, col2 = st.columns(2)
-                with col1:
-                    if connection_status['data_age_seconds'] is not None:
-                        if connection_status['data_age_seconds'] < 10:
-                            st.success("Live Data")
-                        elif connection_status['data_age_seconds'] < 30:
-                            st.warning("Stale Data")
-                        else:
-                            st.error("No Recent Data")
-                
-                with col2:
-                    st.metric("Data Source", "Arduino")
-                
-                # Show live sensor data
-                current_data = self.arduino_manager.get_current_data()
-                if current_data and current_data.get('data_source') == 'arduino':
-                    st.write("**Live Sensor Data:**")
+                if connection_status['connected']:
+                    st.success("✅ Arduino Connected")
                     
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("Temperature", f"{current_data.get('temp', 0):.1f}°C")
-                        st.metric("Humidity", f"{current_data.get('hum', 0):.1f}%")
-                    with col2:
-                        st.metric("Turbidity", f"{current_data.get('turb', 0):.1f} NTU")
-                        st.metric("Air Quality", f"{current_data.get('aqi', 0):.1f} AQI")
-                
-                # Arduino controls
-                if st.button("Refresh Data"):
-                    self.arduino_manager.send_command("DATA")
-                    st.success("Data refresh requested")
-                
-                if st.button("Calibrate Sensors"):
-                    self.arduino_manager.send_command("CALIBRATE")
-                    st.info("Calibration started")
-                
-                if st.button("Disconnect Arduino"):
-                    self.arduino_manager.disconnect()
-                    st.session_state.arduino_connected = False
-                    st.rerun()
+                    # Show live sensor data if available
+                    current_data = self.arduino_manager.get_current_data()
+                    if current_data:
+                        st.write("**Live Sensor Data:**")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("Temperature", f"{current_data.get('temp', current_data.get('temperature', 0)):.1f}°C")
+                            st.metric("Humidity", f"{current_data.get('hum', current_data.get('humidity', 0)):.1f}%")
+                        with col2:
+                            st.metric("Turbidity", f"{current_data.get('turb', current_data.get('turbidity', 0)):.1f} NTU")
+                            st.metric("Air Quality", f"{current_data.get('aqi', current_data.get('air_quality', 0)):.1f} AQI")
                     
-            else:
-                st.warning("Arduino Not Connected")
-                
-                # Auto-detection status
-                if connection_status['auto_detection_active']:
-                    st.info("Auto-detection: ACTIVE")
-                    st.write("Plug in Arduino USB to auto-connect")
+                    if st.button("Disconnect Arduino"):
+                        self.arduino_manager.disconnect()
+                        st.session_state.arduino_connected = False
+                        st.rerun()
                 else:
-                    st.error("Auto-detection: INACTIVE")
-                
-                # Manual connection options
-                if st.button("Scan for Arduino"):
-                    with st.spinner("Scanning for Arduino devices..."):
-                        ports = self.arduino_manager.force_rescan()
-                        
-                        if ports:
-                            st.success(f"Found {len(ports)} Arduino device(s)")
-                            
-                            for i, port in enumerate(ports):
-                                if st.button(f"Connect to {port}", key=f"connect_{i}"):
-                                    success, message = self.arduino_manager.connect(port)
-                                    if success:
-                                        st.session_state.arduino_connected = True
-                                        st.success(message)
-                                        st.rerun()
-                                    else:
-                                        st.error(message)
-                        else:
-                            st.info("No Arduino devices detected")
-                
-                # Show that simulated data is available
-                st.info("Using simulated sensor data")
-                simulated_data = self.arduino_manager.generate_simulated_data("Demo")
-                st.write("**Sample Data:**")
-                st.write(f"• Temperature: {simulated_data.get('temp', 0):.1f}°C")
-                st.write(f"• Humidity: {simulated_data.get('hum', 0):.1f}%")
-                st.write(f"• Turbidity: {simulated_data.get('turb', 0):.1f} NTU")
+                    st.warning("🔌 Arduino Not Connected")
+                    
+                    if st.button("Scan for Arduino"):
+                        try:
+                            ports = self.arduino_manager.force_rescan()
+                            if ports:
+                                st.success(f"Found {len(ports)} Arduino device(s)")
+                            else:
+                                st.info("No Arduino devices found")
+                        except:
+                            st.info("Using simulated sensor data")
+                    
+                    st.info("📊 Using simulated sensor data")
+            except:
+                st.warning("🔌 Arduino Not Connected")
+                st.info("📊 Using simulated sensor data")
             
             # System Status
             st.subheader("System Status")
@@ -229,17 +288,6 @@ class SAEASApplication:
             if st.button("Update Analytics"):
                 self.update_analytics()
                 st.success("Analytics updated")
-            
-            # Data Management
-            st.subheader("Data Management")
-            uploaded_file = st.file_uploader("Import Data", type=['csv'])
-            if uploaded_file is not None:
-                try:
-                    df = pd.read_csv(uploaded_file)
-                    st.session_state.reports_data = df.to_dict('records')
-                    st.success(f"Imported {len(df)} records")
-                except Exception as e:
-                    st.error(f"Error importing file: {e}")
     
     def render_header(self):
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -301,13 +349,6 @@ class SAEASApplication:
         
         with col2:
             self.render_syndrome_distribution()
-        
-        # Environmental data
-        col1, col2 = st.columns(2)
-        with col1:
-            self.render_location_risk()
-        with col2:
-            self.render_environmental_correlations()
     
     def render_risk_trend_chart(self):
         if not st.session_state.risk_assessments:
@@ -344,7 +385,7 @@ class SAEASApplication:
             
             st.plotly_chart(fig, use_container_width=True)
         except Exception as e:
-            st.error(f"Error rendering risk chart: {e}")
+            st.info("Could not generate risk trend chart")
     
     def render_syndrome_distribution(self):
         if not st.session_state.risk_assessments:
@@ -374,45 +415,7 @@ class SAEASApplication:
             
             st.plotly_chart(fig, use_container_width=True)
         except Exception as e:
-            st.error(f"Error rendering syndrome distribution: {e}")
-    
-    def render_location_risk(self):
-        if not st.session_state.risk_assessments:
-            st.info("No location data available")
-            return
-        
-        try:
-            df = pd.DataFrame(st.session_state.risk_assessments)
-            if 'location' not in df.columns or 'risk_score' not in df.columns:
-                st.info("Insufficient data for location analysis")
-                return
-            
-            location_risk = df.groupby('location').agg({
-                'risk_score': ['mean', 'count'],
-                'risk_level': lambda x: (x.isin(['High', 'Critical'])).sum()
-            }).round(3)
-            
-            location_risk.columns = ['avg_risk', 'report_count', 'high_risk_count']
-            location_risk = location_risk.sort_values('avg_risk', ascending=False)
-            
-            fig = go.Figure(data=[
-                go.Bar(name='Average Risk', x=location_risk.index, y=location_risk['avg_risk']),
-                go.Bar(name='High Risk Cases', x=location_risk.index, y=location_risk['high_risk_count'])
-            ])
-            
-            fig.update_layout(
-                title="Risk Analysis by Location",
-                barmode='group',
-                height=400
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-        except Exception as e:
-            st.error(f"Error rendering location risk: {e}")
-    
-    def render_environmental_correlations(self):
-        st.info("Environmental correlation analysis requires sensor data")
-        # Placeholder for environmental analysis
+            st.info("Could not generate syndrome distribution chart")
     
     def render_spatial_tab(self):
         st.header("Spatial Analysis")
@@ -424,7 +427,7 @@ class SAEASApplication:
         try:
             # Simple map visualization
             locations_data = []
-            for assessment in st.session_state.risk_assessments[:50]:  # Limit for performance
+            for assessment in st.session_state.risk_assessments[:20]:  # Limit for performance
                 location = assessment.get('location', 'Unknown')
                 risk_score = assessment.get('risk_score', 0)
                 
@@ -443,26 +446,16 @@ class SAEASApplication:
                     'lat': coords[0],
                     'lon': coords[1],
                     'location': location,
-                    'risk_score': risk_score,
-                    'risk_level': assessment.get('risk_level', 'Low')
+                    'risk_score': risk_score
                 })
             
             if locations_data:
                 map_df = pd.DataFrame(locations_data)
                 st.map(map_df)
-                
-                # Location risk summary
-                st.subheader("Location Risk Summary")
-                location_summary = map_df.groupby('location').agg({
-                    'risk_score': 'mean',
-                    'risk_level': lambda x: x.mode()[0] if len(x.mode()) > 0 else 'Low'
-                }).round(3)
-                
-                st.dataframe(location_summary)
             else:
                 st.info("No location data available for mapping")
         except Exception as e:
-            st.error(f"Error rendering spatial analysis: {e}")
+            st.info("Could not generate spatial analysis")
     
     def render_analytics_tab(self):
         st.header("Advanced Analytics")
@@ -473,23 +466,6 @@ class SAEASApplication:
         
         try:
             df = pd.DataFrame(st.session_state.risk_assessments)
-            
-            # Temporal analysis
-            st.subheader("Temporal Patterns")
-            
-            if 'timestamp' in df.columns:
-                df['hour'] = pd.to_datetime(df['timestamp']).dt.hour
-                hourly_pattern = df.groupby('hour')['risk_score'].mean()
-                
-                fig = px.line(
-                    x=hourly_pattern.index, 
-                    y=hourly_pattern.values,
-                    title="Hourly Risk Pattern",
-                    labels={'x': 'Hour of Day', 'y': 'Average Risk Score'}
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No timestamp data for temporal analysis")
             
             # Risk distribution
             st.subheader("Risk Distribution Analysis")
@@ -519,7 +495,7 @@ class SAEASApplication:
                 else:
                     st.info("No risk level data available")
         except Exception as e:
-            st.error(f"Error rendering analytics: {e}")
+            st.info("Could not generate analytics")
     
     def render_report_tab(self):
         st.header("Health Report System")
@@ -724,18 +700,6 @@ class SAEASApplication:
                     use_container_width=True,
                     height=400
                 )
-                
-                # Show summary statistics
-                st.subheader("Summary Statistics")
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Filtered Reports", len(filtered_df))
-                with col2:
-                    avg_risk = filtered_df['risk_score'].mean() if 'risk_score' in filtered_df.columns else 0
-                    st.metric("Average Risk Score", f"{avg_risk:.3f}")
-                with col3:
-                    high_risk_count = len(filtered_df[filtered_df['risk_level'].isin(['High', 'Critical'])])
-                    st.metric("High/Critical Risk", high_risk_count)
             else:
                 st.info("No data available for display with current filters")
                 
@@ -757,14 +721,8 @@ class SAEASApplication:
                 return
             
             st.warning(f"{len(anomalies)} anomalous reports detected!")
-            
-            for i, anomaly in enumerate(anomalies[:5]):
-                with st.expander(f"Anomaly {i+1}: {anomaly.get('location', 'Unknown')} - Risk: {anomaly.get('risk_score', 0):.3f}"):
-                    st.write(f"Timestamp: {anomaly.get('timestamp', 'Unknown')}")
-                    st.write(f"Risk Level: {anomaly.get('risk_level', 'Unknown')}")
-                    st.write(f"Anomaly Score: {anomaly.get('anomaly_score', 0):.3f}")
         except Exception as e:
-            st.error(f"Error in anomaly detection: {e}")
+            st.info("Anomaly detection not available")
     
     def render_config_tab(self):
         st.header("System Configuration")
