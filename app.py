@@ -230,7 +230,7 @@ class SAEASApplication:
                 st.session_state.arduino_connected = connection_status['connected']
                 
                 if connection_status['connected']:
-                    st.success("✅ Arduino Connected")
+                    st.success("Arduino Connected")
                     
                     # Show live sensor data if available
                     current_data = self.arduino_manager.get_current_data()
@@ -261,10 +261,10 @@ class SAEASApplication:
                         except:
                             st.info("Using simulated sensor data")
                     
-                    st.info("📊 Using simulated sensor data")
+                    st.info("Using simulated sensor data")
             except:
-                st.warning("🔌 Arduino Not Connected")
-                st.info("📊 Using simulated sensor data")
+                st.warning("Arduino Not Connected")
+                st.info("Using simulated sensor data")
             
             # System Status
             st.subheader("System Status")
