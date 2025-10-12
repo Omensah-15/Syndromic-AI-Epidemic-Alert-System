@@ -2,7 +2,7 @@
 
 **Real-time AI-powered public health surveillance and outbreak detection**
 
-Live App: https://hpc7e9vyxqdcibx9vx8dkf.streamlit.app/
+Live App: [SAEAS](https://hpc7e9vyxqdcibx9vx8dkf.streamlit.app/)
 
 ## What It Does
 
