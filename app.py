@@ -97,6 +97,9 @@ class SAEASApplication:
         self.analytics_engine = AdvancedAnalyticsEngine()
         self.inference_engine = ModelInferenceEngine()
         self.initialize_session_state()
+        
+        # Start auto-detection when app starts
+        self.arduino_manager.start_auto_detection()
     
     def initialize_session_state(self):
         if 'app_initialized' not in st.session_state:
@@ -105,76 +108,104 @@ class SAEASApplication:
             st.session_state.risk_assessments = []
             st.session_state.analytics_metrics = {}
             st.session_state.arduino_connected = False
+            st.session_state.last_auto_scan = None
             
             # Load initial data
             self.load_initial_data()
-    
-    def load_initial_data(self):
-        try:
-            sample_data = self.data_loader.load_sample_data()
-            if sample_data is not None and not sample_data.empty:
-                # Ensure all required columns exist
-                sample_data = self._ensure_dataframe_columns(sample_data)
-                st.session_state.reports_data = sample_data.to_dict('records')
-                st.session_state.risk_assessments = self.data_loader.generate_risk_assessments(sample_data)
-                st.session_state.analytics_metrics = self.analytics_engine.calculate_metrics(
-                    st.session_state.risk_assessments
-                )
-        except Exception as e:
-            st.error(f"Error loading initial data: {e}")
-    
-    def _ensure_dataframe_columns(self, df):
-        """Ensure DataFrame has all required columns"""
-        required_columns = {
-            'id': range(len(df)),
-            'timestamp': [datetime.now() - timedelta(days=i) for i in range(len(df))],
-            'location': ['Unknown'] * len(df),
-            'severity': ['Moderate'] * len(df),
-            'cases_count': [1] * len(df),
-            'risk_score': [0.5] * len(df),
-            'risk_level': ['Medium'] * len(df),
-            'syndrome_types': [['General']] * len(df),
-            'environmental_data': [{}] * len(df)
-        }
-        
-        for col, default_values in required_columns.items():
-            if col not in df.columns:
-                df[col] = default_values[:len(df)]
-        
-        return df
-    
-    def run(self):
-        # Show import errors at top
-        if IMPORT_ERROR:
-            st.warning(f"Import warnings: {IMPORT_ERROR}")
-        
-        self.render_sidebar()
-        self.render_header()
-        self.render_dashboard()
     
     def render_sidebar(self):
         with st.sidebar:
             st.title("SAEAS Control Panel")
             
-            # Arduino Connection
+            # Enhanced Arduino Connection Section with Auto-Detection
             st.subheader("Arduino ESP32")
-            if st.session_state.arduino_connected:
+            
+            connection_status = self.arduino_manager.get_connection_status()
+            
+            # Update session state based on actual connection
+            st.session_state.arduino_connected = connection_status['connected']
+            
+            if connection_status['connected']:
                 st.success("Arduino Connected")
-                if st.button("Disconnect"):
+                
+                # Show connection details
+                col1, col2 = st.columns(2)
+                with col1:
+                    if connection_status['data_age_seconds'] is not None:
+                        if connection_status['data_age_seconds'] < 10:
+                            st.success("Live Data")
+                        elif connection_status['data_age_seconds'] < 30:
+                            st.warning("Stale Data")
+                        else:
+                            st.error("No Recent Data")
+                
+                with col2:
+                    st.metric("Data Source", "Arduino")
+                
+                # Show live sensor data
+                current_data = self.arduino_manager.get_current_data()
+                if current_data and current_data.get('data_source') == 'arduino':
+                    st.write("**Live Sensor Data:**")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Temperature", f"{current_data.get('temp', 0):.1f}°C")
+                        st.metric("Humidity", f"{current_data.get('hum', 0):.1f}%")
+                    with col2:
+                        st.metric("Turbidity", f"{current_data.get('turb', 0):.1f} NTU")
+                        st.metric("Air Quality", f"{current_data.get('aqi', 0):.1f} AQI")
+                
+                # Arduino controls
+                if st.button("Refresh Data"):
+                    self.arduino_manager.send_command("DATA")
+                    st.success("Data refresh requested")
+                
+                if st.button("Calibrate Sensors"):
+                    self.arduino_manager.send_command("CALIBRATE")
+                    st.info("Calibration started")
+                
+                if st.button("Disconnect Arduino"):
+                    self.arduino_manager.disconnect()
                     st.session_state.arduino_connected = False
                     st.rerun()
+                    
             else:
                 st.warning("Arduino Not Connected")
-                if st.button("Scan and Connect"):
-                    ports = self.arduino_manager.discover_ports()
-                    if ports:
-                        success, message = self.arduino_manager.connect(ports[0])
-                        if success:
-                            st.session_state.arduino_connected = True
-                            st.success(message)
-                            st.rerun()
-                    else:
-                        st.info("No Arduino devices found - Using simulated data")
+                
+                # Auto-detection status
+                if connection_status['auto_detection_active']:
+                    st.info("Auto-detection: ACTIVE")
+                    st.write("Plug in Arduino USB to auto-connect")
+                else:
+                    st.error("Auto-detection: INACTIVE")
+                
+                # Manual connection options
+                if st.button("Scan for Arduino"):
+                    with st.spinner("Scanning for Arduino devices..."):
+                        ports = self.arduino_manager.force_rescan()
+                        
+                        if ports:
+                            st.success(f"Found {len(ports)} Arduino device(s)")
+                            
+                            for i, port in enumerate(ports):
+                                if st.button(f"Connect to {port}", key=f"connect_{i}"):
+                                    success, message = self.arduino_manager.connect(port)
+                                    if success:
+                                        st.session_state.arduino_connected = True
+                                        st.success(message)
+                                        st.rerun()
+                                    else:
+                                        st.error(message)
+                        else:
+                            st.info("No Arduino devices detected")
+                
+                # Show that simulated data is available
+                st.info("Using simulated sensor data")
+                simulated_data = self.arduino_manager.generate_simulated_data("Demo")
+                st.write("**Sample Data:**")
+                st.write(f"• Temperature: {simulated_data.get('temp', 0):.1f}°C")
+                st.write(f"• Humidity: {simulated_data.get('hum', 0):.1f}%")
+                st.write(f"• Turbidity: {simulated_data.get('turb', 0):.1f} NTU")
             
             # System Status
             st.subheader("System Status")
