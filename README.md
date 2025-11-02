@@ -36,3 +36,8 @@ SAEAS detects disease outbreaks in real-time by analyzing health reports with AI
 2. **View Analytics**: See risk scores, outbreak probabilities, and trends
 3. **Monitor Map**: Watch real-time outbreak hotspots develop
 4. **Get Alerts**: Receive immediate warnings for high-risk situations
+
+## 👨‍💻 Author
+
+**Developed by Mensah Obed**
+📧 [heavenzlebron7@gmail.com](mailto:heavenzlebron7@gmail.com)
