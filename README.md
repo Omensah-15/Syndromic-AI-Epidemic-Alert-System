@@ -40,4 +40,5 @@ SAEAS detects disease outbreaks in real-time by analyzing health reports with AI
 ## 👨‍💻 Author
 
 **Developed by Mensah Obed**
-📧 [heavenzlebron7@gmail.com](mailto:heavenzlebron7@gmail.com)
+[Email](mailto:heavenzlebron7@gmail.com) 
+[LinkedIn](https://www.linkedin.com/in/obed-mensah-87001237b)
