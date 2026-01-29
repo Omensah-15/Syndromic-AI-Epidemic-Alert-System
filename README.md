@@ -2,7 +2,7 @@
 
 **Real-time AI-powered public health surveillance and outbreak detection**
 
-Live App: [SAEAS](https://syndromic-ai-epidemic-alert-system-gznipvj3hv5dyw6a7sdk7f.streamlit.app/)
+**Live App:** **[SAEAS](https://syndromic-ai-epidemic-alert-system-gznipvj3hv5dyw6a7sdk7f.streamlit.app/)**
 
 ### Demo Screenshots:
 ![image alt](https://github.com/Omensah-15/Syndromic-AI-Epidemic-Alert-System/blob/main/utils/Screenshots/Screenshot%202025-10-12%20144440.png)
